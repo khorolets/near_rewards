@@ -2,7 +2,7 @@ use serde_json::json;
 
 use crate::primitives::{Response, AccountInPoolResult, AccountInPoolResponse, ViewAccountResponse};
 
-pub(crate) async fn get_locked_amount(account_id: String) -> Result<u128, request::Error> {
+pub(crate) async fn get_locked_amount(account_id: String) -> Result<u128, reqwest::Error> {
     let params = json!({
         "jsonrpc": "2.0",
         "id": "dontcare",
@@ -16,7 +16,7 @@ pub(crate) async fn get_locked_amount(account_id: String) -> Result<u128, reques
         })
     });
 
-    let client = request::Client::new();
+    let client = reqwest::Client::new();
     let res = client
         .post("https://rpc.mainnet.internal.near.org")
         .json(&params)
@@ -28,7 +28,7 @@ pub(crate) async fn get_locked_amount(account_id: String) -> Result<u128, reques
     Ok(body.result.get_amount())
 }
 
-pub(crate) async fn get_liquid_owners_balance(account_id: String) -> Result<u128, request::Error> {
+pub(crate) async fn get_liquid_owners_balance(account_id: String) -> Result<u128, reqwest::Error> {
     let params = json!({
         "jsonrpc": "2.0",
         "id": "dontcare",
@@ -42,7 +42,7 @@ pub(crate) async fn get_liquid_owners_balance(account_id: String) -> Result<u128
         })
     });
 
-    let client = request::Client::new();
+    let client = reqwest::Client::new();
     let res = client
         .post("https://rpc.mainnet.internal.near.org")
         .json(&params)
@@ -54,7 +54,7 @@ pub(crate) async fn get_liquid_owners_balance(account_id: String) -> Result<u128
     Ok(body.result.get_amount())
 }
 
-pub(crate) async fn get_account_in_pool(account_id: String, pool_account_id: String) -> Result<AccountInPoolResult, request::Error> {
+pub(crate) async fn get_account_in_pool(account_id: String, pool_account_id: String) -> Result<AccountInPoolResult, reqwest::Error> {
     let params = json!({
         "jsonrpc": "2.0",
         "id": "dontcare",
@@ -69,7 +69,7 @@ pub(crate) async fn get_account_in_pool(account_id: String, pool_account_id: Str
     });
 
 
-    let client = request::Client::new();
+    let client = reqwest::Client::new();
     let res = client
         .post("https://rpc.mainnet.internal.near.org")
         .json(&params)
@@ -84,7 +84,7 @@ pub(crate) async fn get_account_in_pool(account_id: String, pool_account_id: Str
     Ok(account_in_pool)
 }
 
-pub(crate) async fn get_native_balance(account_id: String) -> Result<u128, request::Error> {
+pub(crate) async fn get_native_balance(account_id: String) -> Result<u128, reqwest::Error> {
     let params = json!({
         "jsonrpc": "2.0",
         "id": "dontcare",
@@ -96,7 +96,7 @@ pub(crate) async fn get_native_balance(account_id: String) -> Result<u128, reque
         })
     });
 
-    let client = request::Client::new();
+    let client = reqwest::Client::new();
     let res = client
         .post("https://rpc.mainnet.internal.near.org")
         .json(&params)
