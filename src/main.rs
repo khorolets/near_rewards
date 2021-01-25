@@ -63,19 +63,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let locked_amount = match get_locked_amount(account.clone().account_id).await {
             Ok(amount) => amount,
             Err(err) => {
-                panic!("Reqwest Error: {}", err);
+                panic!("Request Error: {}", err);
             }
         };
         let native_balance = match get_native_balance(account.clone().account_id).await {
             Ok(amount) => amount,
             Err(err) => {
-                panic!("Reqwest Error: {}", err);
+                panic!("Request Error: {}", err);
             }
         };
         let liquid_balance = match get_liquid_owners_balance(account.clone().account_id).await {
             Ok(amount) => amount,
             Err(err) => {
-                panic!("Reqwest Error: {}", err);
+                panic!("Request Error: {}", err);
             }
         };
         let reward = account_in_pool.get_staked_balance() + account_in_pool.get_unstaked_balance() + native_balance - locked_amount;

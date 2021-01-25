@@ -850,7 +850,7 @@ dependencies = [
  "futures",
  "near-sdk",
  "prettytable-rs",
- "reqwest",
+ "request",
  "serde",
  "serde_json",
  "tokio",
@@ -1313,7 +1313,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "reqwest"
+name = "request"
 version = "0.10.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0718f81a8e14c4dbb3b34cf23dc6aaf9ab8a0dfec160c534b3dbca1aaa21f47c"
