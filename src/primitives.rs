@@ -1,4 +1,4 @@
-use borsh::{self, BorshSerialize, BorshDeserialize};
+use borsh::{self, BorshDeserialize, BorshSerialize};
 use serde::{self, Deserialize};
 
 #[derive(Debug, Deserialize, BorshDeserialize, Clone)]
@@ -35,10 +35,7 @@ pub(crate) struct ViewAccountResult {
 
 impl ViewAccountResult {
     pub fn get_amount(self) -> u128 {
-        self.amount
-            .trim_matches('"')
-            .parse::<u128>()
-            .unwrap()
+        self.amount.trim_matches('"').parse::<u128>().unwrap()
     }
 }
 
@@ -75,4 +72,46 @@ impl AccountInPoolResult {
 pub(crate) struct Account {
     pub account_id: String,
     pub pool_account_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct StatusReponse {
+    pub result: Status,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Status {
+    pub sync_info: SyncInfo,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SyncInfo {
+    pub latest_block_height: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ValidatorsResponse {
+    pub result: Validators,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Validators {
+    pub epoch_start_height: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct BlockResponse {
+    pub result: Block,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Block {
+    pub header: BlockHeader,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct BlockHeader {
+    pub height: u64,
+    pub hash: String,
+    pub epoch_id: String,
 }

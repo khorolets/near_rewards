@@ -2,16 +2,22 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use clap::Clap;
-#[macro_use] extern crate prettytable;
-use prettytable::{Table, Row, Cell, Attr, color};
+#[macro_use]
+extern crate prettytable;
+use prettytable::{color, Attr, Cell, Row, Table};
 
-use near_jsonrpc_client::{get_account_in_pool, get_native_balance, get_liquid_owners_balance, get_locked_amount};
+use near_jsonrpc_client::{
+    get_account_in_pool, get_block, get_liquid_owners_balance, get_locked_amount,
+    get_native_balance, get_status, get_validators,
+};
 use primitives::Account;
 
-mod near_jsonrpc_client;
 mod configs;
+mod near_jsonrpc_client;
 mod primitives;
 mod utils;
+
+const EPOCH_LENGTH: u64 = 43200;
 
 fn read_accounts(home_dir: std::path::PathBuf) -> Result<String, std::io::Error> {
     let accounts_list_path = home_dir.join("accounts.json");
@@ -24,7 +30,10 @@ fn read_accounts(home_dir: std::path::PathBuf) -> Result<String, std::io::Error>
           }\n\
         ]\n");
     }
-    println!("Reading accounts from {}...", &accounts_list_path.to_string_lossy());
+    println!(
+        "Reading accounts from {}...",
+        &accounts_list_path.to_string_lossy()
+    );
     let mut file = File::open(accounts_list_path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -48,63 +57,118 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             panic!("File read error: {}", err);
         }
     };
-    let mut reward_sum= 0_u128;
-    let mut liquid_balance_sum= 0_u128;
+
+    let current_block_height = match get_status().await {
+        Ok(status_response) => status_response.sync_info.latest_block_height,
+        Err(err) => panic!("Error: {}", err),
+    };
+
+    let block = match get_block(current_block_height).await {
+        Ok(block) => block,
+        Err(err) => panic!("Error: {}", err),
+    };
+
+    let epoch_start_height = match get_validators().await {
+        Ok(validators) => validators.epoch_start_height,
+        Err(err) => panic!("Error: {}", err),
+    };
+
+    let current_position_in_epoch =
+        utils::current_position_in_epoch(epoch_start_height, block.header.height);
+
+    let mut reward_sum = 0_u128;
+    let mut liquid_balance_sum = 0_u128;
+
     let mut table = Table::new();
-    table.add_row(row!["LOCKUP ACCOUNT", "REWARD", "LIQUID", "UNSTAKED", "NATIVE"]);
+    table.add_row(Row::new(vec![Cell::new(
+        format!("Epoch progress: {}%", current_position_in_epoch).as_str(),
+    )
+    .with_hspan(5)]));
+    table.add_row(row![
+        "LOCKUP ACCOUNT",
+        "REWARD",
+        "LIQUID",
+        "UNSTAKED",
+        "NATIVE"
+    ]);
     println!("Fetching accounts data...");
     for account in accounts_file {
-        let account_in_pool = match get_account_in_pool(account.clone().account_id, account.clone().pool_account_id).await {
+        let account_in_pool = match get_account_in_pool(
+            account.clone().account_id,
+            account.clone().pool_account_id,
+            current_block_height,
+        )
+        .await
+        {
             Ok(account) => account,
             Err(err) => {
                 panic!("Error: {}", err);
             }
         };
-        let locked_amount = match get_locked_amount(account.clone().account_id).await {
-            Ok(amount) => amount,
-            Err(err) => {
-                panic!("Reqwest Error: {}", err);
-            }
-        };
-        let native_balance = match get_native_balance(account.clone().account_id).await {
-            Ok(amount) => amount,
-            Err(err) => {
-                panic!("Reqwest Error: {}", err);
-            }
-        };
-        let liquid_balance = match get_liquid_owners_balance(account.clone().account_id).await {
-            Ok(amount) => amount,
-            Err(err) => {
-                panic!("Reqwest Error: {}", err);
-            }
-        };
-        let reward = account_in_pool.get_staked_balance() + account_in_pool.get_unstaked_balance() + native_balance - locked_amount;
+        let locked_amount =
+            match get_locked_amount(account.clone().account_id, current_block_height).await {
+                Ok(amount) => amount,
+                Err(err) => {
+                    panic!("Reqwest Error: {}", err);
+                }
+            };
+        let native_balance =
+            match get_native_balance(account.clone().account_id, current_block_height).await {
+                Ok(amount) => amount,
+                Err(err) => {
+                    panic!("Reqwest Error: {}", err);
+                }
+            };
+        let liquid_balance =
+            match get_liquid_owners_balance(account.clone().account_id, current_block_height).await
+            {
+                Ok(amount) => amount,
+                Err(err) => {
+                    panic!("Reqwest Error: {}", err);
+                }
+            };
+        let reward = account_in_pool.get_staked_balance()
+            + account_in_pool.get_unstaked_balance()
+            + native_balance
+            - locked_amount;
         reward_sum += utils::human(reward);
         liquid_balance_sum += utils::human(liquid_balance);
 
         table.add_row(Row::new(vec![
-            Cell::new(account.account_id.chars().take(14).collect::<String>().as_str())
-                .with_style(Attr::Bold)
-                .with_style(Attr::ForegroundColor(color::WHITE)),
+            Cell::new(
+                account
+                    .account_id
+                    .chars()
+                    .take(14)
+                    .collect::<String>()
+                    .as_str(),
+            )
+            .with_style(Attr::Bold)
+            .with_style(Attr::ForegroundColor(color::WHITE)),
             Cell::new(utils::human(reward).to_string().as_str())
                 .with_style(Attr::ForegroundColor(color::GREEN)),
             Cell::new(utils::human(liquid_balance).to_string().as_str())
                 .with_style(Attr::ForegroundColor(color::CYAN)),
-            Cell::new(utils::human(account_in_pool.get_unstaked_balance())
-                .to_string()
-                .as_str()
+            Cell::new(
+                utils::human(account_in_pool.get_unstaked_balance())
+                    .to_string()
+                    .as_str(),
             )
-                .style_spec(if account_in_pool.can_withdraw { "Fy" } else { "Fr" }),
+            .style_spec(if account_in_pool.can_withdraw {
+                "Fy"
+            } else {
+                "Fr"
+            }),
             Cell::new(utils::human(native_balance).to_string().as_str()),
         ]));
     }
     table.add_row(Row::new(vec![
-            Cell::new(reward_sum.to_string().as_str())
-                .with_hspan(2)
-                .style_spec("br"),
-            Cell::new(liquid_balance_sum.to_string().as_str())
-                .with_hspan(3)
-                .style_spec("b"),
+        Cell::new(reward_sum.to_string().as_str())
+            .with_hspan(2)
+            .style_spec("br"),
+        Cell::new(liquid_balance_sum.to_string().as_str())
+            .with_hspan(3)
+            .style_spec("b"),
     ]));
     let price = match utils::binance_price().await {
         Ok(v) => v,
