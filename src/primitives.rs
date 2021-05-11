@@ -75,21 +75,6 @@ pub(crate) struct Account {
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct StatusReponse {
-    pub result: Status,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct Status {
-    pub sync_info: SyncInfo,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct SyncInfo {
-    pub latest_block_height: u64,
-}
-
-#[derive(Debug, Deserialize)]
 pub(crate) struct ValidatorsResponse {
     pub result: Validators,
 }
@@ -104,14 +89,24 @@ pub(crate) struct BlockResponse {
     pub result: Block,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct Block {
     pub header: BlockHeader,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct BlockHeader {
     pub height: u64,
     pub hash: String,
     pub epoch_id: String,
+}
+
+#[derive(Debug)]
+pub(crate) struct AccountBalancesAtBlock {
+    pub block: Block,
+    pub account: Account,
+    pub account_in_pool: AccountInPoolResult,
+    pub native_balance: u128,
+    pub liquid_balance: u128,
+    pub reward: u128,
 }
