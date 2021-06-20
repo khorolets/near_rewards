@@ -1,16 +1,12 @@
-use std::fs::File;
-use std::io::prelude::*;
-
 use clap::Clap;
+use colored::Colorize;
 #[macro_use]
 extern crate prettytable;
 use prettytable::{color, Attr, Cell, Row, Table};
 
-use near_jsonrpc_client::{
-    get_account_in_pool, get_block, get_liquid_owners_balance, get_locked_amount,
-    get_native_balance, get_status, get_validators,
-};
+use near_jsonrpc_client::{get_block, get_final_block, get_validators};
 use primitives::Account;
+use utils::{collect_account_data, reward_diff};
 
 mod configs;
 mod near_jsonrpc_client;
@@ -18,27 +14,6 @@ mod primitives;
 mod utils;
 
 const EPOCH_LENGTH: u64 = 43200;
-
-fn read_accounts(home_dir: std::path::PathBuf) -> Result<String, std::io::Error> {
-    let accounts_list_path = home_dir.join("accounts.json");
-    if !accounts_list_path.exists() {
-        panic!("You must create ~/near_rewards/accounts.json with list of accounts to check. Example:\n\
-        [\n  \
-          {\n    \
-            \"account_id\": \"accountid.near\",\n    \
-            \"pool_account_id\": \"nameofpool.poolv1.near\"\n  \
-          }\n\
-        ]\n");
-    }
-    println!(
-        "Reading accounts from {}...",
-        &accounts_list_path.to_string_lossy()
-    );
-    let mut file = File::open(accounts_list_path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(contents)
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -51,19 +26,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => panic!("Unavailable to use default path ~/near_rewards/. Try to run `near_rewards --home-dir ~/near_rewards`"),
         });
 
-    let accounts_file: Vec<Account> = match read_accounts(home_dir) {
+    let accounts_file: Vec<Account> = match utils::read_accounts(home_dir) {
         Ok(s) => serde_json::from_str(&s).unwrap(),
         Err(err) => {
             panic!("File read error: {}", err);
         }
     };
 
-    let current_block_height = match get_status().await {
-        Ok(status_response) => status_response.sync_info.latest_block_height,
-        Err(err) => panic!("Error: {}", err),
-    };
-
-    let block = match get_block(current_block_height).await {
+    let current_block = match get_final_block().await {
         Ok(block) => block,
         Err(err) => panic!("Error: {}", err),
     };
@@ -73,8 +43,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(err) => panic!("Error: {}", err),
     };
 
+    // TODO: Improve this, we may end up in missing block so we want
+    // somehow to increment the amount of block we subtract from epoch_start_height
+    let prev_epoch_block = match get_block(epoch_start_height - 5).await {
+        Ok(block) => block,
+        Err(err) => panic!("Error: {}", err),
+    };
+
     let current_position_in_epoch =
-        utils::current_position_in_epoch(epoch_start_height, block.header.height);
+        utils::current_position_in_epoch(epoch_start_height, current_block.header.height);
 
     let mut reward_sum = 0_u128;
     let mut liquid_balance_sum = 0_u128;
@@ -93,46 +70,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     println!("Fetching accounts data...");
     for account in accounts_file {
-        let account_in_pool = match get_account_in_pool(
-            account.clone().account_id,
-            account.clone().pool_account_id,
-            current_block_height,
-        )
-        .await
-        {
-            Ok(account) => account,
-            Err(err) => {
-                panic!("Error: {}", err);
-            }
-        };
-        let locked_amount =
-            match get_locked_amount(account.clone().account_id, current_block_height).await {
-                Ok(amount) => amount,
-                Err(err) => {
-                    panic!("Reqwest Error: {}", err);
-                }
-            };
-        let native_balance =
-            match get_native_balance(account.clone().account_id, current_block_height).await {
-                Ok(amount) => amount,
-                Err(err) => {
-                    panic!("Reqwest Error: {}", err);
-                }
-            };
-        let liquid_balance =
-            match get_liquid_owners_balance(account.clone().account_id, current_block_height).await
-            {
-                Ok(amount) => amount,
-                Err(err) => {
-                    panic!("Reqwest Error: {}", err);
-                }
-            };
-        let reward = account_in_pool.get_staked_balance()
-            + account_in_pool.get_unstaked_balance()
-            + native_balance
-            - locked_amount;
-        reward_sum += utils::human(reward);
-        liquid_balance_sum += utils::human(liquid_balance);
+        let account_at_current_block =
+            collect_account_data(account.clone(), current_block.clone()).await;
+        let account_at_prev_epoch =
+            collect_account_data(account.clone(), prev_epoch_block.clone()).await;
+
+        reward_sum += utils::human(account_at_current_block.reward);
+        liquid_balance_sum += utils::human(account_at_current_block.liquid_balance);
 
         table.add_row(Row::new(vec![
             Cell::new(
@@ -145,21 +89,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
             .with_style(Attr::Bold)
             .with_style(Attr::ForegroundColor(color::WHITE)),
-            Cell::new(utils::human(reward).to_string().as_str())
-                .with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new(utils::human(liquid_balance).to_string().as_str())
-                .with_style(Attr::ForegroundColor(color::CYAN)),
             Cell::new(
-                utils::human(account_in_pool.get_unstaked_balance())
+                format!(
+                    "{} {}",
+                    utils::human(account_at_current_block.reward)
+                        .to_string()
+                        .as_str()
+                        .green(),
+                    &reward_diff(
+                        account_at_current_block.reward,
+                        account_at_prev_epoch.reward,
+                    ),
+                )
+                .as_str(),
+            ),
+            Cell::new(
+                utils::human(account_at_current_block.liquid_balance)
                     .to_string()
                     .as_str(),
             )
-            .style_spec(if account_in_pool.can_withdraw {
+            .with_style(Attr::ForegroundColor(color::CYAN)),
+            Cell::new(
+                utils::human(
+                    account_at_current_block
+                        .account_in_pool
+                        .get_unstaked_balance(),
+                )
+                .to_string()
+                .as_str(),
+            )
+            .style_spec(if account_at_current_block.account_in_pool.can_withdraw {
                 "Fy"
             } else {
                 "Fr"
             }),
-            Cell::new(utils::human(native_balance).to_string().as_str()),
+            Cell::new(
+                utils::human(account_at_current_block.native_balance)
+                    .to_string()
+                    .as_str(),
+            ),
         ]));
     }
     table.add_row(Row::new(vec![

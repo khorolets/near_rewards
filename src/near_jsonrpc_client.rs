@@ -1,8 +1,8 @@
 use serde_json::json;
 
 use crate::primitives::{
-    AccountInPoolResponse, AccountInPoolResult, Block, BlockResponse, Response, Status,
-    StatusReponse, Validators, ValidatorsResponse, ViewAccountResponse,
+    AccountInPoolResponse, AccountInPoolResult, Block, BlockResponse, Response, Validators,
+    ValidatorsResponse, ViewAccountResponse,
 };
 
 pub(crate) async fn get_locked_amount(
@@ -123,27 +123,6 @@ pub(crate) async fn get_native_balance(
     Ok(body.result.get_amount())
 }
 
-pub(crate) async fn get_status() -> Result<Status, reqwest::Error> {
-    let params = json!({
-        "jsonrpc": "2.0",
-        "id": "dontcare",
-        "method": "status",
-        "params": json!({}),
-    });
-
-    let client = reqwest::Client::new();
-
-    let res = client
-        .post("https://rpc.mainnet.internal.near.org")
-        .json(&params)
-        .send()
-        .await?;
-
-    let body: StatusReponse = res.json().await?;
-
-    Ok(body.result)
-}
-
 pub(crate) async fn get_validators() -> Result<Validators, reqwest::Error> {
     let params = json!({
         "jsonrpc": "2.0",
@@ -171,6 +150,27 @@ pub(crate) async fn get_block(block_height: u64) -> Result<Block, reqwest::Error
         "id": "dontcare",
         "method": "block",
         "params": json!({"block_id": block_height}),
+    });
+
+    let client = reqwest::Client::new();
+
+    let res = client
+        .post("https://rpc.mainnet.internal.near.org")
+        .json(&params)
+        .send()
+        .await?;
+
+    let body: BlockResponse = res.json().await?;
+
+    Ok(body.result)
+}
+
+pub(crate) async fn get_final_block() -> Result<Block, reqwest::Error> {
+    let params = json!({
+        "jsonrpc": "2.0",
+        "id": "dontcare",
+        "method": "block",
+        "params": json!({"finality": "final"}),
     });
 
     let client = reqwest::Client::new();
