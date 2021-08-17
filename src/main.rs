@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 use clap::Clap;
-use colored::Colorize;
+
 #[macro_use]
 extern crate prettytable;
 use prettytable::{color, Attr, Cell, Row, Table};
@@ -53,8 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let current_position_in_epoch =
         utils::current_position_in_epoch(epoch_start_height, current_block.header.height);
 
-    let mut reward_sum = 0_u128;
-    let mut liquid_balance_sum = 0_u128;
+    let mut reward_sum = 0_f64;
+    let mut liquid_balance_sum = 0_f64;
 
     let mut table = Table::new();
     table.add_row(Row::new(vec![Cell::new(
@@ -69,6 +71,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "NATIVE"
     ]);
     println!("Fetching accounts data...");
+
+    let mut alredy_fetched_liquid_balance_accounts: HashSet<String> = HashSet::new();
+
     for account in accounts_file {
         let account_at_current_block =
             collect_account_data(account.clone(), current_block.clone()).await;
@@ -76,7 +81,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             collect_account_data(account.clone(), prev_epoch_block.clone()).await;
 
         reward_sum += utils::human(account_at_current_block.reward);
-        liquid_balance_sum += utils::human(account_at_current_block.liquid_balance);
+
+        let liquid_balance = if alredy_fetched_liquid_balance_accounts
+            .get(&account.account_id)
+            .is_none()
+        {
+            alredy_fetched_liquid_balance_accounts.insert(account.account_id.clone());
+            account_at_current_block.liquid_balance
+        } else {
+            0
+        };
+
+        liquid_balance_sum += utils::human(liquid_balance);
 
         table.add_row(Row::new(vec![
             Cell::new(
@@ -89,52 +105,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
             .with_style(Attr::Bold)
             .with_style(Attr::ForegroundColor(color::WHITE)),
-            Cell::new(
-                format!(
-                    "{} {}",
-                    utils::human(account_at_current_block.reward)
-                        .to_string()
-                        .as_str()
-                        .green(),
-                    &reward_diff(
-                        account_at_current_block.reward,
-                        account_at_prev_epoch.reward,
-                    ),
-                )
-                .as_str(),
-            ),
-            Cell::new(
+            Cell::new(&format!(
+                "{} {}",
+                utils::current_reward(account_at_current_block.reward),
+                &reward_diff(
+                    account_at_current_block.reward,
+                    account_at_prev_epoch.reward,
+                ),
+            )),
+            Cell::new(&format!(
+                "{:.2}",
                 utils::human(account_at_current_block.liquid_balance)
-                    .to_string()
-                    .as_str(),
-            )
+            ))
             .with_style(Attr::ForegroundColor(color::CYAN)),
-            Cell::new(
+            Cell::new(&format!(
+                "{:.2}",
                 utils::human(
                     account_at_current_block
                         .account_in_pool
                         .get_unstaked_balance(),
                 )
-                .to_string()
-                .as_str(),
-            )
+            ))
             .style_spec(if account_at_current_block.account_in_pool.can_withdraw {
                 "Fy"
             } else {
                 "Fr"
             }),
-            Cell::new(
+            Cell::new(&format!(
+                "{:.2}",
                 utils::human(account_at_current_block.native_balance)
-                    .to_string()
-                    .as_str(),
-            ),
+            )),
         ]));
     }
     table.add_row(Row::new(vec![
-        Cell::new(reward_sum.to_string().as_str())
+        Cell::new(&format!("{:.2}", reward_sum))
             .with_hspan(2)
             .style_spec("br"),
-        Cell::new(liquid_balance_sum.to_string().as_str())
+        Cell::new(&format!("{:.2}", liquid_balance_sum))
             .with_hspan(3)
             .style_spec("b"),
     ]));
@@ -143,10 +150,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(_) => 0.0,
     };
     table.add_row(Row::new(vec![
-        Cell::new(format!("${}", price * (reward_sum as f32)).as_str())
+        Cell::new(&format!("${:.2}", price * (reward_sum as f32)))
             .with_hspan(2)
             .style_spec("brFg"),
-        Cell::new(format!("${}", price * (liquid_balance_sum as f32)).as_str())
+        Cell::new(&format!("${:.2}", price * (liquid_balance_sum as f32)))
             .with_hspan(3)
             .style_spec("bFc"),
     ]));

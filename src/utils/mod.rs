@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-pub(crate) use accounts::{collect_account_data, reward_diff};
+pub(crate) use accounts::{collect_account_data, current_reward, reward_diff};
 pub(crate) use binance::binance_price;
 pub(crate) use human::{current_position_in_epoch, human};
 
