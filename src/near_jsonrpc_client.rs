@@ -205,7 +205,7 @@ pub(crate) async fn get_staking_pool_account_id(
 
     let client = reqwest::Client::new();
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
