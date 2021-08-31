@@ -12,7 +12,7 @@ pub(crate) async fn collect_account_data(
 ) -> AccountBalancesAtBlock {
     let account_in_pool = match get_account_in_pool(
         account.clone().account_id,
-        account.get_pool_account_id().await.unwrap(),
+        account.get_pool_account_id().await.expect("Unable to get the pool"),
         block.header.height,
     )
     .await

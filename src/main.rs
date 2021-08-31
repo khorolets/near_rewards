@@ -21,20 +21,20 @@ fn print_table(table: &Table, reward_sum: f64, liquid_balance_sum: f64, price: f
     let mut table = table.clone();
 
     table.add_row(Row::new(vec![
-        Cell::new(format!("${:.2}", (reward_sum as f32)).as_str())
-            .with_hspan(3)
+        Cell::new(format!("{:.2}", (reward_sum as f32)).as_str())
+            .with_hspan(2)
             .style_spec("brFg"),
-        Cell::new(format!("${:.2}", (liquid_balance_sum as f32)).as_str())
-            .with_hspan(3)
+        Cell::new(format!("{:.2}", (liquid_balance_sum as f32)).as_str())
+            .with_hspan(4)
             .style_spec("bFc"),
     ]));
 
     table.add_row(Row::new(vec![
         Cell::new(format!("${:.2}", price * (reward_sum as f32)).as_str())
-            .with_hspan(3)
+            .with_hspan(2)
             .style_spec("brFg"),
         Cell::new(format!("${:.2}", price * (liquid_balance_sum as f32)).as_str())
-            .with_hspan(3)
+            .with_hspan(4)
             .style_spec("bFc"),
     ]));
 
