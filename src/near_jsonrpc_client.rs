@@ -5,6 +5,8 @@ use crate::primitives::{
     ValidatorsResponse, ViewAccountResponse,
 };
 
+const NEAR_RPC_ENDPOINT_URL: &str = "https://rpc.mainnet.near.org";
+
 pub(crate) async fn get_locked_amount(
     account_id: String,
     block_height: u64,
@@ -24,7 +26,7 @@ pub(crate) async fn get_locked_amount(
 
     let client = reqwest::Client::new();
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
@@ -53,7 +55,7 @@ pub(crate) async fn get_liquid_owners_balance(
 
     let client = reqwest::Client::new();
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
@@ -83,7 +85,7 @@ pub(crate) async fn get_account_in_pool(
 
     let client = reqwest::Client::new();
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
@@ -113,7 +115,7 @@ pub(crate) async fn get_native_balance(
 
     let client = reqwest::Client::new();
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
@@ -134,7 +136,7 @@ pub(crate) async fn get_validators() -> Result<Validators, reqwest::Error> {
     let client = reqwest::Client::new();
 
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
@@ -155,7 +157,7 @@ pub(crate) async fn get_block(block_height: u64) -> Result<Block, reqwest::Error
     let client = reqwest::Client::new();
 
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
@@ -176,7 +178,7 @@ pub(crate) async fn get_final_block() -> Result<Block, reqwest::Error> {
     let client = reqwest::Client::new();
 
     let res = client
-        .post("https://rpc.mainnet.internal.near.org")
+        .post(NEAR_RPC_ENDPOINT_URL)
         .json(&params)
         .send()
         .await?;
