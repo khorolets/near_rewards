@@ -1,6 +1,6 @@
 [package]
 name = "near-rewards"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Bohdan Khorolets <b@khorolets.com>"]
 edition = "2018"
 
