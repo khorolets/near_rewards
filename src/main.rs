@@ -17,6 +17,30 @@ mod utils;
 
 const EPOCH_LENGTH: u64 = 43200;
 
+fn print_table(table: &Table, reward_sum: f64, liquid_balance_sum: f64, price: f32) {
+    let mut table = table.clone();
+
+    table.add_row(Row::new(vec![
+        Cell::new(format!("{:.2}", (reward_sum as f32)).as_str())
+            .with_hspan(2)
+            .style_spec("brFg"),
+        Cell::new(format!("{:.2}", (liquid_balance_sum as f32)).as_str())
+            .with_hspan(4)
+            .style_spec("bFc"),
+    ]));
+
+    table.add_row(Row::new(vec![
+        Cell::new(format!("${:.2}", price * (reward_sum as f32)).as_str())
+            .with_hspan(2)
+            .style_spec("brFg"),
+        Cell::new(format!("${:.2}", price * (liquid_balance_sum as f32)).as_str())
+            .with_hspan(4)
+            .style_spec("bFc"),
+    ]));
+
+    table.printstd();
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts: configs::Opts = configs::Opts::parse();
@@ -28,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => panic!("Unavailable to use default path ~/near_rewards/. Try to run `near_rewards --home-dir ~/near_rewards`"),
         });
 
-    let accounts_file: Vec<Account> = match utils::read_accounts(home_dir) {
+    let mut accounts_file: Vec<Account> = match utils::read_accounts(home_dir) {
         Ok(s) => serde_json::from_str(&s).unwrap(),
         Err(err) => {
             panic!("File read error: {}", err);
@@ -58,27 +82,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut reward_sum = 0_f64;
     let mut liquid_balance_sum = 0_f64;
 
+    let price = match utils::binance_price().await {
+        Ok(v) => v,
+        Err(_) => 0.0,
+    };
+
     let mut table = Table::new();
-    table.add_row(Row::new(vec![Cell::new(
-        format!("Epoch progress: {}%", current_position_in_epoch).as_str(),
-    )
-    .with_hspan(5)]));
+    table.add_row(Row::new(vec![
+        Cell::new(format!("Epoch progress: {}%", current_position_in_epoch).as_str()).with_hspan(2),
+        Cell::new("NEAR-USDT (Binance)").with_hspan(2),
+        Cell::new(format!("${}", price).as_str())
+            .with_hspan(1)
+            .with_style(Attr::ForegroundColor(color::GREEN)),
+    ]));
+
     table.add_row(row![
         "LOCKUP ACCOUNT",
         "REWARD",
         "LIQUID",
         "UNSTAKED",
-        "NATIVE"
+        "NATIVE",
+        "POOL",
     ]);
+
     println!("Fetching accounts data...");
 
     let mut alredy_fetched_liquid_balance_accounts: HashSet<String> = HashSet::new();
 
-    for account in accounts_file {
+    accounts_file.sort_by(|a, b| a.key.cmp(&b.key));
+
+    for mut account in accounts_file {
         let account_at_current_block =
-            collect_account_data(account.clone(), current_block.clone()).await;
+            collect_account_data(&mut account, current_block.clone()).await;
+
         let account_at_prev_epoch =
-            collect_account_data(account.clone(), prev_epoch_block.clone()).await;
+            collect_account_data(&mut account, prev_epoch_block.clone()).await;
 
         reward_sum += utils::human(account_at_current_block.reward);
 
@@ -135,28 +173,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "{:.2}",
                 utils::human(account_at_current_block.native_balance)
             )),
+            Cell::new(account.get_pool_account_id().await.unwrap().as_str()),
         ]));
+        if opts.verbose {
+            print_table(&table, reward_sum, liquid_balance_sum, price);
+        }
     }
-    table.add_row(Row::new(vec![
-        Cell::new(&format!("{:.2}", reward_sum))
-            .with_hspan(2)
-            .style_spec("br"),
-        Cell::new(&format!("{:.2}", liquid_balance_sum))
-            .with_hspan(3)
-            .style_spec("b"),
-    ]));
-    let price = match utils::binance_price().await {
-        Ok(v) => v,
-        Err(_) => 0.0,
-    };
-    table.add_row(Row::new(vec![
-        Cell::new(&format!("${:.2}", price * (reward_sum as f32)))
-            .with_hspan(2)
-            .style_spec("brFg"),
-        Cell::new(&format!("${:.2}", price * (liquid_balance_sum as f32)))
-            .with_hspan(3)
-            .style_spec("bFc"),
-    ]));
-    table.printstd();
+    if !opts.verbose {
+        print_table(&table, reward_sum, liquid_balance_sum, price);
+    }
     Ok(())
 }

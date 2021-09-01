@@ -1,3 +1,4 @@
+use crate::near_jsonrpc_client::get_staking_pool_account_id;
 use borsh::{self, BorshDeserialize, BorshSerialize};
 use serde::{self, Deserialize};
 
@@ -70,8 +71,21 @@ impl AccountInPoolResult {
 
 #[derive(Debug, Deserialize, Clone)]
 pub(crate) struct Account {
+    /// Value used to identify the account.
+    pub key: Option<String>,
     pub account_id: String,
-    pub pool_account_id: String,
+    pub pool_account_id: Option<String>,
+}
+
+impl Account {
+    pub async fn get_pool_account_id(&mut self) -> Option<String> {
+        if self.pool_account_id.is_none() {
+            self.pool_account_id = get_staking_pool_account_id(self.account_id.clone())
+                .await
+                .ok();
+        }
+        self.pool_account_id.clone()
+    }
 }
 
 #[derive(Debug, Deserialize)]

@@ -6,10 +6,13 @@ use crate::near_jsonrpc_client::{
 use crate::primitives::{Account, AccountBalancesAtBlock, Block};
 use crate::utils;
 
-pub(crate) async fn collect_account_data(account: Account, block: Block) -> AccountBalancesAtBlock {
+pub(crate) async fn collect_account_data(
+    account: &mut Account,
+    block: Block,
+) -> AccountBalancesAtBlock {
     let account_in_pool = match get_account_in_pool(
         account.clone().account_id,
-        account.clone().pool_account_id,
+        account.get_pool_account_id().await.expect("Unable to get the pool"),
         block.header.height,
     )
     .await
@@ -43,7 +46,7 @@ pub(crate) async fn collect_account_data(account: Account, block: Block) -> Acco
 
     AccountBalancesAtBlock {
         block,
-        account,
+        account: account.clone(),
         account_in_pool,
         native_balance,
         liquid_balance,

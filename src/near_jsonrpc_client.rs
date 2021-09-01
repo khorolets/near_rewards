@@ -187,3 +187,31 @@ pub(crate) async fn get_final_block() -> Result<Block, reqwest::Error> {
 
     Ok(body.result)
 }
+pub(crate) async fn get_staking_pool_account_id(
+    account_id: String,
+) -> Result<String, reqwest::Error> {
+    let params = json!({
+        "jsonrpc": "2.0",
+        "id": "dontcare",
+        "method": "query",
+        "params": json!({
+            "request_type": "call_function",
+            "finality": "final",
+            "account_id": account_id,
+            "method_name": "get_staking_pool_account_id",
+            "args_base64": "e30="
+        })
+    });
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post(NEAR_RPC_ENDPOINT_URL)
+        .json(&params)
+        .send()
+        .await?;
+
+    let body: AccountInPoolResponse = res.json().await?;
+
+    let pool_account_id: String = serde_json::from_slice(&body.result.result[..]).unwrap();
+    Ok(pool_account_id)
+}
