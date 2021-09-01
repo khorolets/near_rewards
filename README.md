@@ -1,6 +1,6 @@
 # near_rewards
 
-Small console application to check the staking rewards for lockup accounts on NEAR protocol.
+Small console application to check the staking rewards for ~~lockup~~ accounts on [NEAR protocol](https://near.org)
 
 ## Example result:
 
@@ -31,12 +31,25 @@ source $HOME/.cargo/env
 ```json
 [
   {
-    "account_id": "account.lockup.near",
+    "account_id": "account.near",
     "pool_account_id": "pool.poolv1.near"
   }
 ]
 ```
 
-_**Note:** This tool only works for lockup accounts._
+OR
+
+```json
+[
+  {
+    "account_id": "account.lockup.near",
+    "key": "ed25519:FQxoGzhKW129Vq8Uk8WqeSV1e8z3oJFMC1UbN6z6yBHT"
+  }
+]
+```
+
+~~_**Note:** This tool only works for lockup accounts._~~
+
+The tool works for any account in NEAR
 
 3. Run `cargo run` in your terminal.
