@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "near-rewards"
-version = "0.4.2"
+version = "0.5.1"
 dependencies = [
  "base64 0.13.0",
  "borsh",

@@ -40,9 +40,9 @@ pub(crate) async fn collect_account_data(
             Err(_err) => native_balance,
         };
     let reward = account_in_pool.get_staked_balance()
-        + account_in_pool.get_unstaked_balance()
-        + if locked_amount > 0 { native_balance } else { 0 }
-        - locked_amount;
+        .saturating_add(account_in_pool.get_unstaked_balance())
+        .saturating_add(if locked_amount > 0 { native_balance } else { 0 })
+        .saturating_sub(locked_amount);
 
     AccountBalancesAtBlock {
         block,
