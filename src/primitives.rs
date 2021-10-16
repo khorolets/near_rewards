@@ -75,6 +75,7 @@ pub(crate) struct Account {
     pub key: Option<String>,
     pub account_id: String,
     pub pool_account_id: Option<String>,
+    pub locked_amount: Option<String>,
 }
 
 impl Account {

@@ -22,11 +22,18 @@ pub(crate) async fn collect_account_data(
             panic!("Error: {}", err);
         }
     };
-    let locked_amount: u128 =
+    let locked_amount: u128 = if let Some(amount) = &account.locked_amount {
+        if let Ok(amount) = amount.parse() {
+            amount
+        } else {
+            0
+        }
+    } else {
         match get_locked_amount(account.clone().account_id, block.header.height).await {
             Ok(amount) => amount,
             Err(_err) => 0,
-        };
+        }
+    };
     let native_balance =
         match get_native_balance(account.clone().account_id, block.header.height).await {
             Ok(amount) => amount,
