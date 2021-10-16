@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // TODO: Improve this, we may end up in missing block so we want
     // somehow to increment the amount of block we subtract from epoch_start_height
-    let prev_epoch_block = match get_block(epoch_start_height - 5).await {
+    let prev_epoch_block = match get_block(epoch_start_height - 6).await {
         Ok(block) => block,
         Err(err) => panic!("Error: {}", err),
     };
