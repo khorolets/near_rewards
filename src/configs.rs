@@ -8,8 +8,9 @@ pub(crate) struct Opts {
     /// Sets a custom near_rewards dir. Defaults to ~/near_rewards
     #[clap(short, long)]
     pub home_dir: Option<std::path::PathBuf>,
-    // #[clap(subcommand)]
-    // pub subcmd: SubCommand,
     #[clap(short, long)]
     pub verbose: bool,
+    /// Provide a custom RPC server URL
+    #[clap(long, default_value = "https://rpc.mainnet.near.org")]
+    pub rpc_url: String,
 }

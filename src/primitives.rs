@@ -1,4 +1,4 @@
-use crate::near_jsonrpc_client::get_staking_pool_account_id;
+use crate::near_jsonrpc_client::NearJsonRpcClient;
 use borsh::{self, BorshDeserialize, BorshSerialize};
 use serde::{self, Deserialize};
 
@@ -9,8 +9,6 @@ pub(crate) struct Response {
 
 #[derive(Debug, Deserialize, BorshDeserialize, Clone)]
 pub(crate) struct ResponseResult {
-    pub block_hash: String,
-    pub block_height: u64,
     pub result: Vec<u8>,
 }
 
@@ -79,9 +77,10 @@ pub(crate) struct Account {
 }
 
 impl Account {
-    pub async fn get_pool_account_id(&mut self) -> Option<String> {
+    pub async fn get_pool_account_id(&mut self, client: &NearJsonRpcClient) -> Option<String> {
         if self.pool_account_id.is_none() {
-            self.pool_account_id = get_staking_pool_account_id(self.account_id.clone())
+            self.pool_account_id = client
+                .get_staking_pool_account_id(self.account_id.clone())
                 .await
                 .ok();
         }
@@ -112,14 +111,10 @@ pub(crate) struct Block {
 #[derive(Debug, Deserialize, Clone)]
 pub(crate) struct BlockHeader {
     pub height: u64,
-    pub hash: String,
-    pub epoch_id: String,
 }
 
 #[derive(Debug)]
 pub(crate) struct AccountBalancesAtBlock {
-    pub block: Block,
-    pub account: Account,
     pub account_in_pool: AccountInPoolResult,
     pub native_balance: u128,
     pub liquid_balance: u128,
