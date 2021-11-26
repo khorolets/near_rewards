@@ -12,7 +12,8 @@ mod human;
 pub(crate) fn read_accounts(home_dir: std::path::PathBuf) -> Result<String, std::io::Error> {
     let accounts_list_path = home_dir.join("accounts.json");
     if !accounts_list_path.exists() {
-        panic!("You must create {:?} with list of accounts to check. Example:\n {}",
+        panic!(
+            "You must create {:?} with list of accounts to check. Example:\n {}",
             &home_dir,
             "
         [\n  \

@@ -6,7 +6,7 @@ use clap::Clap;
 extern crate prettytable;
 use prettytable::{color, Attr, Cell, Row, Table};
 
-use near_jsonrpc_client::{get_block, get_final_block, get_validators};
+use near_jsonrpc_client::NearJsonRpcClient;
 use primitives::Account;
 use utils::{collect_account_data, reward_diff};
 
@@ -59,19 +59,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let current_block = match get_final_block().await {
+    let client = NearJsonRpcClient::new(opts.rpc_url);
+
+    let current_block = match client.get_final_block().await {
         Ok(block) => block,
         Err(err) => panic!("Error: {}", err),
     };
 
-    let epoch_start_height = match get_validators().await {
+    let epoch_start_height = match client.get_validators().await {
         Ok(validators) => validators.epoch_start_height,
         Err(err) => panic!("Error: {}", err),
     };
 
     // TODO: Improve this, we may end up in missing block so we want
     // somehow to increment the amount of block we subtract from epoch_start_height
-    let prev_epoch_block = match get_block(epoch_start_height - 6).await {
+    let prev_epoch_block = match client.get_block(epoch_start_height - 6).await {
         Ok(block) => block,
         Err(err) => panic!("Error: {}", err),
     };
@@ -113,10 +115,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for mut account in accounts_file {
         let account_at_current_block =
-            collect_account_data(&mut account, current_block.clone()).await;
+            collect_account_data(&client, &mut account, current_block.clone()).await;
 
         let account_at_prev_epoch =
-            collect_account_data(&mut account, prev_epoch_block.clone()).await;
+            collect_account_data(&client, &mut account, prev_epoch_block.clone()).await;
 
         reward_sum += utils::human(account_at_current_block.reward);
 
@@ -173,7 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "{:.2}",
                 utils::human(account_at_current_block.native_balance)
             )),
-            Cell::new(account.get_pool_account_id().await.unwrap().as_str()),
+            Cell::new(account.get_pool_account_id(&client).await.unwrap().as_str()),
         ]));
         if opts.verbose {
             print_table(&table, reward_sum, liquid_balance_sum, price);
