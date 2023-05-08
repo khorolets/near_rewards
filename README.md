@@ -52,4 +52,5 @@ OR
 
 The tool works for any account in NEAR
 
-3. Run `cargo run` in your terminal.
+3. Run `cargo install --git https://github.com/khorolets/near_rewards` in your terminal.
+4. Run `near-rewards` in your terminal.

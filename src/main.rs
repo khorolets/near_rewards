@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use clap::Clap;
+use clap::Parser;
 
 #[macro_use]
 extern crate prettytable;
@@ -84,10 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut reward_sum = 0_f64;
     let mut liquid_balance_sum = 0_f64;
 
-    let price = match utils::binance_price().await {
-        Ok(v) => v,
-        Err(_) => 0.0,
-    };
+    let price = utils::binance_price().await.unwrap_or(0.0);
 
     let mut table = Table::new();
     table.add_row(Row::new(vec![
