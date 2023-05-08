@@ -13,7 +13,7 @@ pub(crate) async fn collect_account_data(
         .get_account_in_pool(
             account.clone().account_id,
             account
-                .get_pool_account_id(&client)
+                .get_pool_account_id(client)
                 .await
                 .expect("Unable to get the pool"),
             block.header.height,
@@ -72,18 +72,18 @@ pub(crate) async fn collect_account_data(
 
 pub(crate) fn reward_diff(current_reward: u128, prev_reward: u128) -> String {
     if current_reward > prev_reward {
-        return format!("+{:.2}", utils::human(current_reward - prev_reward))
+        format!("+{:.2}", utils::human(current_reward - prev_reward))
             .blue()
-            .to_string();
+            .to_string()
     } else {
-        return format!("-{:.2}", utils::human(prev_reward - current_reward))
+        format!("-{:.2}", utils::human(prev_reward - current_reward))
             .red()
-            .to_string();
+            .to_string()
     }
 }
 
 pub(crate) fn current_reward(current_reward: u128) -> String {
-    return format!("{:.2}", utils::human(current_reward))
+    format!("{:.2}", utils::human(current_reward))
         .green()
-        .to_string();
+        .to_string()
 }
