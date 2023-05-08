@@ -1,3 +1,4 @@
+use base64::Engine;
 use serde_json::json;
 
 use crate::primitives::{
@@ -82,7 +83,7 @@ impl NearJsonRpcClient {
                 "block_id": block_height,
                 "account_id": pool_account_id,
                 "method_name": "get_account",
-                "args_base64": base64::encode(json!({"account_id": account_id}).to_string()),
+                "args_base64": base64::engine::general_purpose::STANDARD.encode(json!({"account_id": account_id}).to_string()),
             })
         });
 
